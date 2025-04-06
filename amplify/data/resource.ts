@@ -3,7 +3,6 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 const schema = a.schema({
   LocationRecord: a
     .model({
-      userId: a.string().required(),
       latitude: a.float().required(),
       longitude: a.float().required(),
       timestamp: a.string().required(),
@@ -11,7 +10,7 @@ const schema = a.schema({
       notes: a.string()
     })
     .authorization(rules => [
-      rules.owner()
+      rules.owner(),
     ])
 });
 
