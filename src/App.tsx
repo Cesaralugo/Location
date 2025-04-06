@@ -26,13 +26,12 @@ function App() {
           userId: {
             eq: userId
           }
-        },
-        sort:{
-          field:'timestamp',
-          direction:'DESC'
         }
       });
-      setLocations(response.data);
+      const sortedLocations = [...response.data].sort((a,b)=>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      setLocations(sortedLocations);
     } catch (error) {
       console.error('Error fetching locations:', error);
     }
