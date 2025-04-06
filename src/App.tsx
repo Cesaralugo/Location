@@ -1,56 +1,34 @@
 import { useState, useEffect } from 'react';
-import { signOut, getCurrentUser } from 'aws-amplify/auth';
-import { generateClient } from 'aws-amplify/api';
-import { withAuthenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import './App.css';
 import { type Schema } from '../amplify/data/resource';
-import { SortDirection } from 'aws-amplify/datastore';
+import { generateClient } from 'aws-amplify/api';
 
 // Create API client with the schema
 const client = generateClient<Schema>();
 
-function App({ signOut: handleSignOut }) {
-  const [user, setUser] = useState<any>(null);
+function App() {
+  const [userId, setUserId] = useState<string>('default-user'); // Provide a default user ID or let user input it
   const [isTracking, setIsTracking] = useState<boolean>(false);
   const [locations, setLocations] = useState<any[]>([]);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
   const [trackingInterval, setTrackingInterval] = useState<number | null>(null);
 
-  // Get current user on mount
-  useEffect(() => {
-    async function fetchUser() {
-      try {
-        const userData = await getCurrentUser();
-        setUser(userData);
-      } catch (err) {
-        console.error('Error fetching user:', err);
-      }
-    }
-    fetchUser();
-  }, []);
-
   // Fetch existing locations on component mount
   useEffect(() => {
-    if (user) {
-      fetchLocations();
-    }
-  }, [user]);
+    fetchLocations();
+  }, []);
 
   async function fetchLocations() {
-    if (!user) return;
-    
     try {
       const response = await client.models.LocationRecord.list({
         filter: {
           userId: {
-            eq: user.username
+            eq: userId
           }
         },
-        sort: {
-          sortDirection: 'DESC',
-          sortBy: 'timestamp'
-        }
+        sortDirection: 'DESC',
+        sortBy: 'timestamp'
       });
       setLocations(response.data);
     } catch (error) {
@@ -68,10 +46,8 @@ function App({ signOut: handleSignOut }) {
     const interval = window.setInterval(() => {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
-          if (!user) return;
-          
           const newLocation = {
-            userId: user.username,
+            userId: userId,
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             timestamp: new Date().toISOString(),
@@ -112,17 +88,17 @@ function App({ signOut: handleSignOut }) {
     }
   };
 
-  if (!user) {
-    return <div>Loading user information...</div>;
-  }
-
   return (
     <div className="app-container">
       <header>
         <h1>Location Tracker</h1>
         <div className="user-info">
-          <p>Welcome, {user.username}!</p>
-          <button onClick={handleSignOut} className="sign-out-btn">Sign Out</button>
+          <input 
+            type="text" 
+            value={userId} 
+            onChange={(e) => setUserId(e.target.value)}
+            placeholder="Enter User ID" 
+          />
         </div>
       </header>
 
@@ -172,7 +148,8 @@ function App({ signOut: handleSignOut }) {
   );
 }
 
-export default withAuthenticator(App);
+export default App;
+
 
 /*
 import { useEffect, useState } from "react";
