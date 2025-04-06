@@ -5,6 +5,7 @@ import { withAuthenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import './App.css';
 import { type Schema } from '../amplify/data/resource';
+import { SortDirection } from 'aws-amplify/datastore';
 
 // Create API client with the schema
 const client = generateClient<Schema>();
@@ -47,8 +48,8 @@ function App({ signOut: handleSignOut }) {
           }
         },
         sort: {
-          field: 'timestamp',
-          direction: 'DESC'
+          sortDirection: 'DESC',
+          sortBy: 'timestamp'
         }
       });
       setLocations(response.data);
