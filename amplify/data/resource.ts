@@ -10,10 +10,8 @@ const schema = a.schema({
       accuracy: a.float(),
       notes: a.string()
     })
-    .authorization((allow) => [
-      allow.guest(),
-      allow.publicApiKey(),
-      //allow.authenticated(),
+    .authorization(rules => [
+      rules.owner()
     ])
 });
 
