@@ -27,8 +27,10 @@ function App() {
             eq: userId
           }
         },
-        sortDirection: 'DESC',
-        sortBy: 'timestamp'
+        sort:{
+          field:'timestamp',
+          direction:'DESC'
+        }
       });
       setLocations(response.data);
     } catch (error) {
