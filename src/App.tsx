@@ -11,16 +11,17 @@ function LocationTracker() {
   const [isTracking, setIsTracking] = useState(false);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
+  // Update the session access to use Amplify v6+ syntax
   useEffect(() => {
     const initClient = async () => {
-      const client = new IoTDataPlaneClient({
+     const client = new IoTDataPlaneClient({
         region: AWS_REGION,
         credentials: fromCognitoIdentityPool({
           client: new CognitoIdentityClient({ region: AWS_REGION }),
           identityPoolId: IDENTITY_POOL_ID,
           logins: {
             [`cognito-idp.${AWS_REGION}.amazonaws.com/${USER_POOL_ID}`]: 
-              user?.getSignInUserSession()?.getIdToken().getJwtToken() || ''
+              user?.getTokens()?.idToken?.toString() || ''
           }
         })
       });
@@ -29,6 +30,7 @@ function LocationTracker() {
 
     if (user) initClient();
   }, [user]);
+
 
   const publishLocation = useCallback(async (coords: GeolocationCoordinates) => {
     if (!iotClient || !user) return;

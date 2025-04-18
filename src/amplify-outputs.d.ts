@@ -9,4 +9,4 @@ declare module './amplify_outputs.json' {
     };
     export default value;
   }
-  
+  // Replace this line
