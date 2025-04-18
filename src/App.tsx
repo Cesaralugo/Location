@@ -4,6 +4,7 @@ import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-pla
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity';
 import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity';
 import { AWS_REGION, IDENTITY_POOL_ID, USER_POOL_ID } from './aws-iot-config';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 function LocationTracker() {
   const { user } = useAuthenticator();
@@ -14,23 +15,29 @@ function LocationTracker() {
   // Update the session access to use Amplify v6+ syntax
   useEffect(() => {
     const initClient = async () => {
-     const client = new IoTDataPlaneClient({
-        region: AWS_REGION,
-        credentials: fromCognitoIdentityPool({
-          client: new CognitoIdentityClient({ region: AWS_REGION }),
-          identityPoolId: IDENTITY_POOL_ID,
-          logins: {
-            [`cognito-idp.${AWS_REGION}.amazonaws.com/${USER_POOL_ID}`]: 
-              user?.getTokens()?.idToken?.toString() || ''
-          }
-        })
-      });
-      setIoTClient(client);
+      try {
+        const session = await fetchAuthSession();
+        const idToken = session.tokens?.idToken?.toString(); // get token string
+  
+        const client = new IoTDataPlaneClient({
+          region: AWS_REGION,
+          credentials: fromCognitoIdentityPool({
+            client: new CognitoIdentityClient({ region: AWS_REGION }),
+            identityPoolId: IDENTITY_POOL_ID,
+            logins: {
+              [`cognito-idp.${AWS_REGION}.amazonaws.com/${USER_POOL_ID}`]: idToken ?? '',
+            }
+          })
+        });
+  
+        setIoTClient(client);
+      } catch (err) {
+        console.error('Failed to init IoT client:', err);
+      }
     };
-
+  
     if (user) initClient();
   }, [user]);
-
 
   const publishLocation = useCallback(async (coords: GeolocationCoordinates) => {
     if (!iotClient || !user) return;
