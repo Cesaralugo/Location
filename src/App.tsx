@@ -1,83 +1,58 @@
-import { useEffect, useState } from 'react';
-import { Authenticator } from '@aws-amplify/ui-react';
-import { Auth } from '@aws-amplify/auth';
-import { iotClient } from './aws-iot-config';
-import { PublishCommand } from '@aws-sdk/client-iot-data-plane';
+// src/App.tsx
+import { useState, useEffect, useCallback } from 'react';
+import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
+import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
+import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity';
+import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity';
+import { amplifyConfig } from './aws-iot-config';
+
+function LocationTracker() {
+  const { user, signOut } = useAuthenticator();
+  const [iotClient, setIoTClient] = useState<IoTDataPlaneClient | null>(null);
+
+  useEffect(() => {
+    const initClient = async () => {
+      const client = new IoTDataPlaneClient({
+        region: amplifyConfig.region,
+        credentials: fromCognitoIdentityPool({
+          client: new CognitoIdentityClient({ region: awsConfig.region }),
+          identityPoolId: amplifyConfig.identityPoolId,
+          logins: {
+            [`cognito-idp.${amplifyConfig.region}.amazonaws.com/${awsConfig.userPoolId}`]: 
+              user?.getSignInUserSession()?.getIdToken().getJwtToken() || ''
+          }
+        })
+      });
+      setIoTClient(client);
+    };
+
+    if (user) initClient();
+  }, [user]);
+
+  const publishLocation = useCallback(async (coords: GeolocationCoordinates) => {
+    if (!iotClient || !user) return;
+
+    await iotClient.send(new PublishCommand({
+      topic: `location/${user.username}`,
+      payload: new TextEncoder().encode(JSON.stringify({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        timestamp: new Date().toISOString()
+      }))
+    }));
+  }, [iotClient, user]);
+
+  // ... rest of your component
+}
 
 export default function App() {
-  const [isConnected, setIsConnected] = useState(false);
-  const [trackingInterval, setTrackingInterval] = useState<NodeJS.Timeout|null>(null);
-
-  // Initialize IoT Connection
-  useEffect(() => {
-    const verifyConnection = async () => {
-      try {
-        await iotClient.send(new PublishCommand({
-          topic: 'location/ping',
-          payload: new TextEncoder().encode('ping')
-        }));
-        setIsConnected(true);
-      } catch (error) {
-        console.error('IoT Connection Error:', error);
-      }
-    };
-    
-    verifyConnection();
-  }, []);
-
-  const publishLocation = async (coords: GeolocationCoordinates) => {
-    try {
-      await iotClient.send(new PublishCommand({
-        topic: 'location/tracking',
-        payload: new TextEncoder().encode(JSON.stringify({
-          userId: (await Auth.currentAuthenticatedUser()).username,
-          timestamp: new Date().toISOString(),
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          accuracy: coords.accuracy
-        }))
-      }));
-    } catch (error) {
-      console.error('Publish Error:', error);
-    }
-  };
-
-  const startTracking = () => {
-    const interval = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          await publishLocation(position.coords);
-        },
-        (error) => console.error('Geolocation Error:', error),
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    }, 5000);
-    
-    setTrackingInterval(interval);
-  };
-
-  const stopTracking = () => {
-    if (trackingInterval) clearInterval(trackingInterval);
-    setTrackingInterval(null);
-  };
-
   return (
     <Authenticator>
-      {({ signOut, user }) => (
-        <div className="app-container">
-          <div className="connection-status">
-            IoT Status: {isConnected ? 'Connected' : 'Disconnected'}
-          </div>
-          
-          {/* Rest of your UI components */}
-          <button onClick={startTracking} disabled={!isConnected}>
-            Start Tracking
-          </button>
-        </div>
-      )}
+      <LocationTracker/>
     </Authenticator>
   );
 }
+
 
 /*import { useState, useEffect } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
