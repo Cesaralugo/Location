@@ -1,24 +1,25 @@
-// src/App.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react';
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity';
 import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity';
-import { amplifyConfig } from './aws-iot-config';
+import { AWS_REGION, IDENTITY_POOL_ID, USER_POOL_ID } from './aws-iot-config';
 
 function LocationTracker() {
-  const { user, signOut } = useAuthenticator();
+  const { user } = useAuthenticator();
   const [iotClient, setIoTClient] = useState<IoTDataPlaneClient | null>(null);
+  const [isTracking, setIsTracking] = useState(false);
+  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const initClient = async () => {
       const client = new IoTDataPlaneClient({
-        region: amplifyConfig.region,
+        region: AWS_REGION,
         credentials: fromCognitoIdentityPool({
-          client: new CognitoIdentityClient({ region: awsConfig.region }),
-          identityPoolId: amplifyConfig.identityPoolId,
+          client: new CognitoIdentityClient({ region: AWS_REGION }),
+          identityPoolId: IDENTITY_POOL_ID,
           logins: {
-            [`cognito-idp.${amplifyConfig.region}.amazonaws.com/${awsConfig.userPoolId}`]: 
+            [`cognito-idp.${AWS_REGION}.amazonaws.com/${USER_POOL_ID}`]: 
               user?.getSignInUserSession()?.getIdToken().getJwtToken() || ''
           }
         })
@@ -42,16 +43,40 @@ function LocationTracker() {
     }));
   }, [iotClient, user]);
 
-  // ... rest of your component
+  const startTracking = useCallback(() => {
+    const id = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        position => publishLocation(position.coords),
+        error => console.error('Location error:', error)
+      );
+    }, 5000);
+    setIntervalId(id);
+    setIsTracking(true);
+  }, [publishLocation]);
+
+  const stopTracking = useCallback(() => {
+    if (intervalId) clearInterval(intervalId);
+    setIntervalId(null);
+    setIsTracking(false);
+  }, [intervalId]);
+
+  return (
+    <div className="app-container">
+      <button onClick={isTracking ? stopTracking : startTracking}>
+        {isTracking ? 'Stop Tracking' : 'Start Tracking'}
+      </button>
+    </div>
+  );
 }
 
 export default function App() {
   return (
-    <Authenticator>
-      <LocationTracker/>
+    <Authenticator loginMechanisms={['email']}>
+      <LocationTracker />
     </Authenticator>
   );
 }
+
 
 
 /*import { useState, useEffect } from 'react';
