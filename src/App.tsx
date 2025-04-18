@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
-import { Auth } from 'aws-amplify';
+import { Auth } from '@aws-amplify/auth';
 import { iotClient } from './aws-iot-config';
 import { PublishCommand } from '@aws-sdk/client-iot-data-plane';
 
-function App() {
+export default function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [trackingInterval, setTrackingInterval] = useState<NodeJS.Timeout|null>(null);
 

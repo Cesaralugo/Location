@@ -1,8 +1,9 @@
+// src/aws-iot-config.ts
 import { Amplify } from 'aws-amplify';
 import { CognitoIdentityClient } from '@aws-sdk/client-cognito-identity';
 import { fromCognitoIdentityPool } from '@aws-sdk/credential-provider-cognito-identity';
 import { IoTDataPlaneClient } from '@aws-sdk/client-iot-data-plane';
-import amplify_outputs from './amplify_outputs.json';
+import amplify_outputs from "../amplify_outputs.json";
 
 Amplify.configure(amplify_outputs);
 
